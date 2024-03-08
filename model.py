@@ -41,6 +41,7 @@ class Transformer(nn.Module):
         self.norm = RMSNorm(args.dim, eps=args.norm_eps)
         self.output = nn.Linear(args.dim, args.vocab_size, bias=False)
 
+        # we multiply seq_len *2 because the prompt might be long
         self.freqs_complex = precompute_theta_pos_frequencies(self.args.dim // self.args.n_heads,
                                                               self.args.max_seq_length * 2,
                                                               device=self.args.device)
