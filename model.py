@@ -59,6 +59,43 @@ def precompute_theta_pos_frequencies(head_dim: int, seq_length: int, device: str
     return m_theta_complex
 
 
+def apply_rotary_embeddings(x: torch.Tensor, m_theta_complex: torch.Tensor, device: str):
+    """
+    Applies four transformation to input embedding and applies rotary embeddings to it.
+    Args:
+        x: input embeddings B, seq_length, H, Head_dim
+        m_theta_complex: Seq_length, Head_dim/2
+        device: device str
+
+    Returns: B, seq_length, H, Head_dim
+
+    """
+    # step 1, 2 reshaping the input matrix to be in a form of [[x1 x1] [x3 x4]]
+    # Separate the last dimension pairs of two values, representing the
+    # real and imaginary parts of the complex number
+    # Two consecutive values will become a single complex number
+    # so that we can apply complex transformation to it -> [x1 + ix2  x3+ ix4]
+    # (B, Seq_Len, H, Head_Dim) -> (B, Seq_Len, H, Head_Dim/2)
+    x_complex = torch.view_as_complex(x.float().reshape(*x.shape[:-1], -1, 2))
+
+    # Reshape the m_theta complex tensor to match the shape of the x_complex tensor.
+    # So we need to add the batch dimension and the head dimension
+    # (Seq_Len, Head_Dim/2) -> (1, Seq_Len, 1, Head_Dim/2)
+    m_theta_complex = m_theta_complex.unsqueeze(0).unsqueeze(2)
+
+    # step3
+    # Multiply each complex number in the x_complex tensor by the corresponding
+    # complex number in the mtheta_complex tensor
+    # Which results in the rotation of the complex number as shown in the Figure 1 of the paper
+    # (B, Seq_Len, H, Head_Dim/2) * (1, Seq_Len, 1, Head_Dim/2) = (B, Seq_Len, H, Head_Dim/2)
+    x_rotated = x_complex * m_theta_complex
+
+    # step4 convert to real values, and flatten
+    x_out = torch.view_as_real(x_rotated)
+    x_out = x_out.reshape(*x.shape)
+    return x_out.as_type(x).to(device)
+
+
 class Transformer(nn.Module):
     def __init__(self, args: ModelArgs) -> None:
         super().__init__()
