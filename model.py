@@ -96,6 +96,24 @@ def apply_rotary_embeddings(x: torch.Tensor, m_theta_complex: torch.Tensor, devi
     return x_out.as_type(x).to(device)
 
 
+class RMSNorm(nn.Module):
+    """applies RMSNorm paper"""
+
+    def __init__(self, dim: int, eps: float = 1e-6):
+        super().__init__()
+        self.eps = eps
+        self.weight = nn.Parameter(torch.ones(dim))
+
+    def _norm(self, x: torch.Tensor):
+        # (B, seq_len, dim) / d, seq, dim -> B, seq_len, dim
+        rms = torch.sqrt(x.pow(2).mean(-1, keepdim=True) + self.eps)
+        return x / rms
+
+    def forward(self, x: torch.Tensor):
+        # (dim) * B, Seq_len, Dim - >  B, Seq_len, Dim
+        return self.weight * self._norm(x.float()).type_as(x)
+
+
 class Transformer(nn.Module):
     def __init__(self, args: ModelArgs) -> None:
         super().__init__()
