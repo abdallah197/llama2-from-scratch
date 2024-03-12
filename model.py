@@ -114,6 +114,58 @@ class RMSNorm(nn.Module):
         return self.weight * self._norm(x.float()).type_as(x)
 
 
+class EncoderBlock(nn.Module):
+    """
+    Implements an Encoder Block for a transformer model following the Llama2 architecture.
+
+    This block consists of a self-attention mechanism followed by a position-wise feed-forward network.
+    Each of these components is preceded by layer normalization. Residual connections are also employed
+    around both the self-attention and feed-forward networks.
+
+    Attributes:
+        n_heads (int): Number of attention heads.
+        dim (int): Dimensionality of the input features.
+        head_dim (int): Dimensionality of each attention head.
+        attention (SelfAttention): The self-attention mechanism.
+        feed_forward (FeedForward): The feed-forward network.
+        attention_norm (RMSNorm): Layer normalization before the self-attention.
+        ffn_norm (RMSNorm): Layer normalization before the feed-forward network.
+    """
+
+    def __init__(self, args: Any):
+        """
+        Initializes the EncoderBlock with the specified parameters.
+
+        Args:
+            args (ModelArgs): Configuration arguments for the model. Expected to contain
+                              'n_heads', 'dim', 'norm_eps' for initializing various components.
+        """
+        super().__init__()
+        self.n_heads = args.n_heads
+        self.dim = args.dim
+        self.head_dim = self.dim // self.n_heads
+        self.attention = SelfAttention(args)
+        self.feed_forward = FeedForward(args)
+        self.attention_norm = RMSNorm(args.dim, eps=args.norm_eps)
+        self.ffn_norm = RMSNorm(args.dim, eps=args.norm_eps)
+
+    def forward(self, x: torch.Tensor, start_pos: int, m_theta_complex: torch.Tensor) -> torch.Tensor:
+        """
+        Defines the forward pass of the EncoderBlock.
+
+        Args:
+            x (torch.Tensor): The input tensor of shape (batch_size, sequence_length, dim).
+            start_pos (int): Starting position for processing the input.
+            m_theta_complex (torch.Tensor): Additional tensor required for the self-attention mechanism.
+
+        Returns:
+            torch.Tensor: The output tensor after processing through the encoder block.
+        """
+        h = x + self.attention(self.attention_norm(x), start_pos, m_theta_complex)
+        out = h + self.feed_forward(self.ffn_norm(h))
+        return out
+
+
 class Transformer(nn.Module):
     def __init__(self, args: ModelArgs) -> None:
         super().__init__()
@@ -126,7 +178,7 @@ class Transformer(nn.Module):
 
         self.layers = nn.ModuleList()
         for _ in range(args.n_layers):
-            self.layers.append(EncoderBlock(args))
+            self.layers.append(EncoderBlock(self.args))
 
         self.norm = RMSNorm(args.dim, eps=args.norm_eps)
         self.output = nn.Linear(args.dim, args.vocab_size, bias=False)
