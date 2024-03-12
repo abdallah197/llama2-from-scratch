@@ -132,7 +132,7 @@ class EncoderBlock(nn.Module):
         ffn_norm (RMSNorm): Layer normalization before the feed-forward network.
     """
 
-    def __init__(self, args: Any):
+    def __init__(self, args: ModelArgs):
         """
         Initializes the EncoderBlock with the specified parameters.
 
