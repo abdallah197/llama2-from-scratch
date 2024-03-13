@@ -234,6 +234,76 @@ class SelfAttention(nn.Module):
         return self.wo(output)  # apply the final WO linear transformation
 
 
+class FeedForward(nn.Module):
+    """
+    Implements a feed-forward neural network layer as part of a Transformer model architecture.
+
+    This feed-forward network applies a sequence of linear transformations and non-linear activations
+    to the input tensor. It optionally allows for the adjustment of the hidden dimension size through
+    a multiplier and ensures that the hidden dimension size is a multiple of a specified value.
+    """
+
+    def __init__(self, args: ModelArgs):
+        """
+        Initializes the FeedForward layer with configurable hidden dimensions.
+
+        Args:
+            args (ModelArgs): Configuration arguments including the input dimension (`dim`), an optional
+                              feed-forward dimension multiplier (`ffn_dim_multiplier`), and a factor
+                              (`multiple_of`) to which the hidden dimension size should be rounded up.
+        """
+        super().__init__()
+
+        # Calculate the initial hidden dimension size as four times the input dimension size
+        hidden_dim = args.dim * 4
+
+        # Optionally reduce the hidden dimension size to two-thirds of its initial size
+        hidden_dim = int(2 * hidden_dim / 3)
+
+        # If a feed-forward dimension multiplier is provided, apply it to the hidden dimension size
+        if args.ffn_dim_multiplier:
+            hidden_dim = int(args.ffn_dim_multiplier * hidden_dim)
+
+        # Round the hidden dimension size up to the nearest multiple of a specified factor
+        hidden_dim = args.multiple_of * ((hidden_dim + args.multiple_of - 1) // args.multiple_of)
+
+        # Define the first linear transformation from input dimension to hidden dimension
+        self.w1 = nn.Linear(args.dim, hidden_dim, bias=False)
+
+        # Define the second linear transformation from hidden dimension back to input dimension
+        self.w2 = nn.Linear(hidden_dim, args.dim, bias=False)
+
+        # Define an additional linear transformation as an alternative path within the layer
+        self.w3 = nn.Linear(args.dim, hidden_dim, bias=False)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """
+        Forward pass of the FeedForward layer, applying SWiGLU activation function.
+
+        Args:
+            x (torch.Tensor): The input tensor with shape (batch_size, seq_length, input_dimension).
+
+        Returns:
+            torch.Tensor: The output tensor after applying the feed-forward transformations,
+                           with the same shape as the input tensor (batch_size, seq_length, input_dimension).
+        """
+        # Apply the first linear transformation followed by the SiLU (Swish) activation function
+        # Resulting shape: (batch_size, seq_length, hidden_dimension)
+        swish = F.silu(self.w1(x))
+
+        # Apply the additional linear transformation to the input tensor
+        # Resulting shape: (batch_size, seq_length, hidden_dimension)
+        x_v = self.w3(x)
+
+        # Element-wise multiplication of the SiLU-activated tensor and the additional linearly transformed tensor
+        out = swish * x_v
+
+        # Apply the second linear transformation to map back to the input dimension size
+        # Resulting shape: (batch_size, seq_length, input_dimension)
+        out = self.w2(out)
+
+        return out
+
 class EncoderBlock(nn.Module):
     """
     Implements an Encoder Block for a transformer model following the Llama2 architecture.
