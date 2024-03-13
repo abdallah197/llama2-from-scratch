@@ -1,8 +1,10 @@
+import math
 from dataclasses import dataclass
 from typing import Optional
 
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 
 @dataclass
@@ -96,6 +98,44 @@ def apply_rotary_embeddings(x: torch.Tensor, m_theta_complex: torch.Tensor, devi
     return x_out.as_type(x).to(device)
 
 
+def repeat_kv(x: torch.Tensor, n_rep: int) -> torch.Tensor:
+    """
+    Repeats the key/value tensor along the head dimension a specified number of times.
+
+    This function is useful in self-attention mechanisms where the number of heads for keys/values
+    differs from that of queries, requiring an adjustment to match the dimensions for computation.
+
+    Args:
+        x (torch.Tensor): The input tensor representing keys or values with shape
+                          (batch_size, seq_length, n_kv_heads, head_dim).
+        n_rep (int): The number of times each key/value tensor should be repeated along the head dimension.
+
+    Returns:
+        torch.Tensor: The expanded tensor with repeated keys/values along the head dimension,
+                      resulting in a new shape (batch_size, seq_length, n_kv_heads * n_rep, head_dim).
+    """
+    # Unpack the shape of the input tensor for clarity
+    batch_size, seq_length, n_kv_heads, head_dim = x.shape
+
+    # If no repetition is needed, return the original tensor
+    if n_rep == 1:
+        return x
+
+    # Expand the tensor along a new dimension to repeat it, followed by a reshape to merge the repeated dimension
+    # with the head dimension, effectively increasing the number of heads by n_rep times.
+    # Step 1: Introduce a new dimension for repetition with shape (batch_size, seq_length, n_kv_heads, 1, head_dim)
+    # Step 2: Expand the tensor along the new dimension to repeat each slice n_rep times, resulting in shape
+    #         (batch_size, seq_length, n_kv_heads, n_rep, head_dim)
+    # Step 3: Reshape the expanded tensor to merge the new dimension with the head dimension, yielding a new shape
+    #         (batch_size, seq_length, n_kv_heads * n_rep, head_dim), effectively increasing the head count.
+    return (
+        x.unsqueeze(-2)  # Introduce a new dimension for repetition at the second last position
+        .expand(batch_size, seq_length, n_kv_heads, n_rep, head_dim)  # Expand along the new dimension
+        .reshape(batch_size, seq_length, n_kv_heads * n_rep, head_dim)
+        # Merge the new dimension with the head dimension
+    )
+
+
 class RMSNorm(nn.Module):
     """applies RMSNorm paper"""
 
@@ -112,6 +152,86 @@ class RMSNorm(nn.Module):
     def forward(self, x: torch.Tensor):
         # (dim) * B, Seq_len, Dim - >  B, Seq_len, Dim
         return self.weight * self._norm(x.float()).type_as(x)
+
+
+class SelfAttention(nn.Module):
+    """Implements a self-attention mechanism with an optional difference in the number of heads for keys/values and
+     queries."""
+
+    def __init__(self, args: ModelArgs):
+        """Initializes the SelfAttention module with configurable head dimensions and counts."""
+        super().__init__()
+        # Choose the number of heads for keys and values, defaulting to the overall number of heads if not specified
+        self.n_kv_heads = args.n_heads if args.n_kv_heads is None else args.n_kv_heads
+        # The number of heads for queries is set to the overall number of heads
+        self.n_heads_q = args.n_heads
+        # Calculate how many times keys and values should be repeated to match the number of query heads
+        self.n_rep = self.n_heads_q // self.n_kv_heads
+        # Determine the dimension of each head based on the model dimension and the number of heads
+        self.head_dim = args.dim // args.n_heads
+
+        # Linear transformations for queries, keys, and values
+        self.wq = nn.Linear(args.dim, self.head_dim * self.n_heads_q, bias=False)
+        self.wk = nn.Linear(args.dim, self.head_dim * self.n_kv_heads, bias=False)
+        self.wv = nn.Linear(args.dim, self.head_dim * self.n_kv_heads, bias=False)
+        # Linear transformation for the output
+        self.wo = nn.Linear(self.head_dim * self.n_heads_q, args.dim, bias=False)
+
+        # Initialize caches for keys and values to zeros
+        self.cache_k = torch.zeros(args.max_batch_size, args.max_seq_length, self.n_kv_heads, self.head_dim)
+        self.cache_v = torch.zeros(args.max_batch_size, args.max_seq_length, self.n_kv_heads, self.head_dim)
+
+    def forward(self, x: torch.Tensor, start_pos: int, m_theta_complex: torch.Tensor) -> torch.Tensor:
+        """Forward pass for the SelfAttention module, computes attention scores and applies them to the input."""
+        batch_size, seq_length, _ = x.shape  # Input shape: (Batch Size, Sequence Length, Head Dimension)
+        # (B, 1, Dim) ->  # (B, 1, HQ * Head dim)
+        xq = self.wq(x)
+        # (B, 1, Dim) ->  # (B, 1, H_KV * Head dim)
+        xk = self.wk(x)
+        # (B, 1, Dim) ->  # (B, 1, H_KV * Head dim)
+        xv = self.wv(x)
+
+        # (batch_size, 1, H_Q * Head Dim) --> (batch_size, 1, H_Q,  Head Dim)
+        xq = xq.view(batch_size, seq_length, self.n_heads_q, self.head_dim)
+
+        # (batch_size, 1, H_KV * Head Dim) --> (batch_size, 1, H_KV,  Head Dim)
+        xk = xk.view(batch_size, seq_length, self.n_kv_heads, self.head_dim)
+        xv = xv.view(batch_size, seq_length, self.n_kv_heads, self.head_dim)
+
+        # Apply rotary position embeddings to queries and keys (shapes remain unchanged)
+        xq = apply_rotary_embeddings(xq, m_theta_complex, device=x.device)
+        xk = apply_rotary_embeddings(xk, m_theta_complex, device=x.device)
+
+        # replace the entry in the cache for this token.
+        # we update the KV cache by appending the current attention calculations
+        self.cache_k[:batch_size, start_pos:start_pos + seq_length] = xk
+        self.cache_v[:batch_size, start_pos:start_pos + seq_length] = xv
+
+        # Retrieve all the cached values and keys up to this token
+        # (batch_size, Seq_len_KV, H_KV, Head_Dim)
+        keys = self.cache_k[:batch_size, 0:start_pos + seq_length]
+        values = self.cache_v[:batch_size, 0:start_pos + seq_length]
+
+        # Repeat the heads of K, V to reach the number of heads of Q.
+        # This is a shortcut and not the optimized solution to implement Grouped Query attention
+        keys = repeat_kv(keys, self.n_rep)
+        values = repeat_kv(values, self.n_rep)
+
+        # Transpose for attention computation to move the head dimension before the sequence length dimension
+        # New shapes: (Batch Size, Num Heads for Queries, 1 or Sequence Length, Head Dimension)
+        # (B, 1, H, Head_dim) -> (B, H, 1, Head_Dim)
+        xq, keys, values = map(lambda t: t.transpose(1, 2), (xq, keys, values))
+
+        # we apply the equation q.kt/sqrt(d)
+        # (B, H_Q, 1, Head_dim) @ (B, H_Q, Head_dim, Seq_len_KV) --> (B, HQ,1, Seq_len_KV)
+        scores = torch.matmul(xq, keys.transpose(-2, -1)) / math.sqrt(self.head_dim)
+        scores = F.softmax(scores.float(), dim=-1).type_as(xq)
+
+        # (B, HQ,1, Seq_len_KV) @ (B, HQ, seq_len_KV, Head_Dim) -> (B, HQ, 1, Head_Dim)
+        output = torch.matmul(scores, values)
+        # (B, HQ, 1, Head_Dim) -->  (B, 1, H_Q, Head_Dim) --> B, 1, Head_dim
+        output = output.transpose(1, 2).contigous().view(batch_size, seq_length, -1)
+        return self.wo(output)  # apply the final WO linear transformation
 
 
 class EncoderBlock(nn.Module):
