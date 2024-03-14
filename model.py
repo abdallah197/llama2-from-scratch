@@ -304,6 +304,7 @@ class FeedForward(nn.Module):
 
         return out
 
+
 class EncoderBlock(nn.Module):
     """
     Implements an Encoder Block for a transformer model following the Llama2 architecture.
