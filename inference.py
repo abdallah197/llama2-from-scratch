@@ -134,8 +134,42 @@ class LLama:
             out_text.append(self.tokenizer.decode(current_prompt_tokens))
         return out_tokens, out_text
 
-    def _sample_top_p(self, probs, top_p):
-        return 1
+    def _sample_top_p(self, probs: torch.Tensor, top_p: float) -> torch.Tensor:
+        """
+        Sample a token index from probability distribution of tokens with cumulative probability <= top_p.
+
+        Args:
+            probs (torch.Tensor): The original probabilities of tokens (shape: [batch_size, vocab_size]).
+            top_p (float): The cumulative probability threshold. Tokens with cumulative probabilities
+                           greater than top_p are not considered for sampling.
+
+        Returns:
+            torch.Tensor: Indices of the sampled tokens (shape: [batch_size, 1]).
+        """
+        # Sort the probabilities in descending order and also get the original indices
+        probs_sorted, indices = torch.sort(probs, dim=-1, descending=True)
+
+        # Compute the cumulative sum of the sorted probabilities
+        cumulative_probs = torch.cumsum(probs_sorted, dim=-1)
+
+        # Create a mask to zero out probabilities that are beyond the top_p threshold
+        # Subtracting probs_sorted shifts the cumulative sums to the right, ensuring that exactly
+        # top_p of cumulative probabilities are retained
+        mask = cumulative_probs - probs_sorted > top_p
+
+        # Zero out the probabilities that are not in the top_p
+        probs_sorted[mask] = 0.0
+
+        # Normalize the modified probabilities to ensure their sum equals 1
+        probs_sorted /= probs_sorted.sum(dim=-1, keepdim=True)
+
+        # Sample a token from the modified distribution
+        sampled_token = torch.multinomial(probs_sorted, num_samples=1)
+
+        # Map the sampled token index back to the original index in the vocabulary
+        final_token = torch.gather(indices, -1, sampled_token)
+
+        return final_token
 
 
 if __name__ == '__main__':
