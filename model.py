@@ -95,7 +95,7 @@ def apply_rotary_embeddings(x: torch.Tensor, m_theta_complex: torch.Tensor, devi
     # step4 convert to real values, and flatten
     x_out = torch.view_as_real(x_rotated)
     x_out = x_out.reshape(*x.shape)
-    return x_out.as_type(x).to(device)
+    return x_out.type_as(x).to(device)
 
 
 def repeat_kv(x: torch.Tensor, n_rep: int) -> torch.Tensor:
@@ -230,7 +230,7 @@ class SelfAttention(nn.Module):
         # (B, HQ,1, Seq_len_KV) @ (B, HQ, seq_len_KV, Head_Dim) -> (B, HQ, 1, Head_Dim)
         output = torch.matmul(scores, values)
         # (B, HQ, 1, Head_Dim) -->  (B, 1, H_Q, Head_Dim) --> B, 1, Head_dim
-        output = output.transpose(1, 2).contigous().view(batch_size, seq_length, -1)
+        output = output.transpose(1, 2).contiguous().view(batch_size, seq_length, -1)
         return self.wo(output)  # apply the final WO linear transformation
 
 
@@ -391,7 +391,7 @@ class Transformer(nn.Module):
         freqs_complex = self.freqs_complex[start_pos: start_pos + seq_len]
 
         # Consecutively apply all the encoder layers
-        for layer in self.n_layers:
+        for layer in self.layers:
             h = layer(h, start_pos, freqs_complex)
 
         h = self.norm(h)

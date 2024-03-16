@@ -87,7 +87,7 @@ class LLama:
                                                         f" or equal to {self.args.max_batch_size}")
         max_prompt_len = max(len(prompt) for prompt in prompt_tokens)
         # Make sure the prompt length is not larger than the maximum sequence length
-        assert max_prompt_len <= self.args.max_seq_len, (f"prompt length must be less than"
+        assert max_prompt_len <= self.args.max_seq_length, (f"prompt length must be less than"
                                                          f" or equal to {self.args.max_seq_length}")
         total_len = min(self.args.max_seq_length, max_prompt_len + max_gen_len)
 
@@ -175,7 +175,7 @@ class LLama:
 if __name__ == '__main__':
     torch.manual_seed(0)
     prompts = [
-        ''
+        'As a Sudanese, I'
     ]
     allow_cuda = False
     device = 'cuda' if torch.cuda.is_available() and allow_cuda else 'cpu'
@@ -183,8 +183,10 @@ if __name__ == '__main__':
         checkpoint_dir='llama-2-7b',
         tokenizer_path='tokenizer.model',
         load_model=True,
-        max_seq_len=1024,
+        max_seq_len=10,
         max_batch_size=len(prompts),
         device=device
     )
+    out_tokens, out_text = model.generate(prompts, max_gen_len=100)
+    print(out_text)
     print('All Ok')
