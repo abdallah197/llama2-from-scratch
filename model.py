@@ -202,15 +202,19 @@ class SelfAttention(nn.Module):
         xq = apply_rotary_embeddings(xq, m_theta_complex, device=x.device)
         xk = apply_rotary_embeddings(xk, m_theta_complex, device=x.device)
 
-        # replace the entry in the cache for this token.
-        # we update the KV cache by appending the current attention calculations
-        self.cache_k[:batch_size, start_pos:start_pos + seq_length] = xk
-        self.cache_v[:batch_size, start_pos:start_pos + seq_length] = xv
+        # During inference, we apply KV cache.
+        if not self.training:
+            # replace the entry in the cache for this token.
+            # we update the KV cache by appending the current attention calculations
+            self.cache_k[:batch_size, start_pos:start_pos + seq_length] = xk
+            self.cache_v[:batch_size, start_pos:start_pos + seq_length] = xv
 
-        # Retrieve all the cached values and keys up to this token
-        # (batch_size, Seq_len_KV, H_KV, Head_Dim)
-        keys = self.cache_k[:batch_size, 0:start_pos + seq_length]
-        values = self.cache_v[:batch_size, 0:start_pos + seq_length]
+            # Retrieve all the cached values and keys up to this token
+            # (batch_size, Seq_len_KV, H_KV, Head_Dim)
+            keys = self.cache_k[:batch_size, 0:start_pos + seq_length]
+            values = self.cache_v[:batch_size, 0:start_pos + seq_length]
+        else:
+            keys, values = xk, xv
 
         # Repeat the heads of K, V to reach the number of heads of Q.
         # This is a shortcut and not the optimized solution to implement Grouped Query attention
