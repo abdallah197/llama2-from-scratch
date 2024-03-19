@@ -90,16 +90,3 @@ class TextFileDataset(Dataset):
 
         return torch.tensor(tokenized_line, dtype=torch.long, device=self.device)
 
-# if __name__ == "__main__":
-# device = 'cuda' if torch.cuda.is_available() else 'cpu'
-# filepath = 'input.txt'
-# tokenizer = spm.SentencePieceProcessor()
-# tokenizer.load('tokenizer.model')
-# max_sequence_length = 32
-# pad_id = tokenizer.pad_id()
-# dataset = TextFileDataset(filepath, tokenizer, max_sequence_length, device, pad_id)
-# dataloader = DataLoader(dataset, batch_size=32, collate_fn=llama_collate_fn)
-#
-# for item in dataloader:
-#     print(item)
-#     break
