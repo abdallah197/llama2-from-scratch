@@ -1,6 +1,32 @@
+from typing import List, Tuple
+
 import sentencepiece as spm
 import torch
 from torch.utils.data import Dataset
+
+
+def llama_collate_fn(batch: List[torch.Tensor]) -> Tuple[torch.Tensor, torch.Tensor]:
+    """Prepares batch data for model training by creating input and target tensors.
+
+    This function processes a batch of data by separating each sequence into input and target components.
+    The input (`x`) omits the last token of each sequence, and the target (`y`) omits the first token,
+    effectively creating a shifted version of the sequence for language modeling tasks.
+
+    Args:
+        batch (List[torch.Tensor]): A list of sequences, where each sequence is a tensor of token IDs.
+
+    Returns:
+        Tuple[torch.Tensor, torch.Tensor]: A tuple containing two tensors:
+            - `x_batch`: The input tensor for the model, excluding the last token of each sequence.
+            - `y_batch`: The target tensor for the model, excluding the first token of each sequence.
+    """
+    x = [item[:-1] for item in batch]  # Inputs with last token removed
+    y = [item[1:] for item in batch]  # Targets with first token removed
+
+    x_batch = torch.stack(x)
+    y_batch = torch.stack(y)
+
+    return x_batch, y_batch
 
 
 class TextFileDataset(Dataset):
