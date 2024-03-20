@@ -7,7 +7,7 @@ from torch.optim.lr_scheduler import LambdaLR
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
-from config import TrainConfig
+from config import TrainArgs
 from model import Transformer
 
 
@@ -56,7 +56,7 @@ def rate(step: int, model_size: int, warmup: int, factor: int = 1):
     )
 
 
-def train(model: Transformer, train_config: TrainConfig, train_dataloader: DataLoader, eval_dataloader: DataLoader):
+def train(model: Transformer, train_config: TrainArgs, train_dataloader: DataLoader, eval_dataloader: DataLoader):
     optimizer = AdamW(model.parameters(), lr=train_config.lr)
     scheduler = LambdaLR(optimizer=optimizer,
                          lr_lambda=lambda step: rate(

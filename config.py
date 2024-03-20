@@ -23,9 +23,16 @@ class ModelArgs:
 
 
 @dataclass
-class TrainConfig(ModelArgs):
+class TrainArgs(ModelArgs):
     n_epochs: int = 10
     log_interval: int = 3
     eval_iters: int = 200
     lr: float = 3e-4
     warmup_steps: int = 4000
+
+
+@dataclass
+class DataArgs(ModelArgs):
+    filepath: str = 'input.txt'
+    tokenizer_model_path: str = 'tokenizer.model'
+    train_size: float = 0.9

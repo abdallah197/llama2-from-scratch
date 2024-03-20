@@ -2,7 +2,7 @@ from typing import List, Tuple
 
 import sentencepiece as spm
 import torch
-from torch.utils.data import Dataset
+from torch.utils.data import Dataset, random_split, DataLoader
 
 
 def llama_collate_fn(batch: List[torch.Tensor]) -> Tuple[torch.Tensor, torch.Tensor]:
@@ -90,3 +90,44 @@ class TextFileDataset(Dataset):
 
         return torch.tensor(tokenized_line, dtype=torch.long, device=self.device)
 
+
+def split_dataset(dataset: Dataset, train_split_ratio: float) -> Tuple[Dataset, Dataset]:
+    """Splits a dataset into training and evaluation subsets.
+    Args:
+        dataset (Dataset): The dataset to be split.
+        train_split_ratio (float): The proportion of the dataset to be used for training.
+                                   This should be a decimal between 0 and 1.
+
+    Returns:
+        Tuple[Dataset, Dataset]: A tuple containing two subsets of the original dataset:
+            - The first element is the training dataset.
+            - The second element is the evaluation dataset.
+    """
+    dataset_size = len(dataset)
+    train_size = int(dataset_size * train_split_ratio)  # E.g., 80% of the dataset for training
+    eval_size = dataset_size - train_size  # The remainder for evaluation
+    train_dataset, eval_dataset = random_split(dataset, [train_size, eval_size])
+
+    return train_dataset, eval_dataset
+
+
+def create_dataloaders(
+        dataset: Dataset,
+        train_split_ratio: float,
+        batch_size: int,
+) -> Tuple[DataLoader, DataLoader]:
+    """Creates data loaders for training and evaluation datasets.
+    Args:
+        dataset (Dataset): The torch dataset class that contain the data
+        train_split_ratio (float): The proportion of the dataset to be used for training.
+                                   This should be a decimal between 0 and 1.
+        batch_size (int): The number of samples to be loaded per batch.
+    Returns:
+        Tuple[DataLoader, DataLoader]: A tuple containing the data loaders for the training and evaluation datasets.
+    """
+    train_dataset, eval_dataset = split_dataset(dataset, train_split_ratio)
+
+    train_dataloader = DataLoader(train_dataset, batch_size=batch_size, collate_fn=llama_collate_fn)
+    eval_dataloader = DataLoader(eval_dataset, batch_size=batch_size, collate_fn=llama_collate_fn)
+
+    return train_dataloader, eval_dataloader
