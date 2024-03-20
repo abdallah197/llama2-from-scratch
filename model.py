@@ -368,7 +368,6 @@ class Transformer(nn.Module):
     def forward(self, tokens: torch.Tensor, start_pos: int, targets=None):
         # (B, seq_length)
         batch_size, seq_len = tokens.shape
-        assert seq_len == 1  # only one token at a time can be processed.
 
         # (B, seq_length) -> (B, seq_length, dim)
         h = self.tok_embeddings(tokens)

@@ -5,7 +5,9 @@ import torch
 from torch.optim import AdamW
 from torch.optim.lr_scheduler import LambdaLR
 from torch.utils.data import DataLoader
+from tqdm import tqdm
 
+from config import TrainConfig
 from model import Transformer
 
 
@@ -42,7 +44,44 @@ def estimate_loss(model: Transformer, eval_iters: int, train_dataloader: DataLoa
     return average_losses
 
 
-def train(model: Transformer, n_epochs: int, log_interval: int, eval_iters: int, lr: float, optimizer: AdamW,
-          scheduler: LambdaLR = None):
-# TODO
-# 1. create the optimizer,and the scheduler
+def rate(step: int, model_size: int, warmup: int, factor: int = 1):
+    """
+    we have to default the step to 1 for LambdaLR function
+    to avoid zero raising to negative power.
+    """
+    if step == 0:
+        step = 1
+    return factor * (
+            model_size ** (-0.5) * min(step ** (-0.5), step * warmup ** (-1.5))
+    )
+
+
+def train(model: Transformer, train_config: TrainConfig, train_dataloader: DataLoader, eval_dataloader: DataLoader):
+    optimizer = AdamW(model.parameters(), lr=train_config.lr)
+    scheduler = LambdaLR(optimizer=optimizer,
+                         lr_lambda=lambda step: rate(
+                             step=step,
+                             model_size=model.args.dim,
+                             warmup=train_config.warmup_steps,
+                         ))
+    losses = []
+    for epoch in tqdm(range(train_config.n_epochs)):
+
+        # train the model
+        model.train()
+        for X, Y in train_dataloader:
+            optimizer.zero_grad()
+            logits, loss = model(X, 0, Y)
+            loss.backward()
+            optimizer.step()
+            scheduler.step()
+
+            # if epoch % train_config.log_interval == 0:
+            out = estimate_loss(model=model,
+                                eval_iters=train_config.eval_iters,
+                                train_dataloader=train_dataloader,
+                                eval_dataloader=eval_dataloader)
+            losses.extend(out)
+            print(f'Epoch: {epoch} | train_loss: {out["train"]:.2f}, eval_loss: {out["eval"]:.2f}')
+
+    return losses
