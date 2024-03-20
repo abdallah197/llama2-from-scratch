@@ -7,7 +7,8 @@ import torch
 from sentencepiece import SentencePieceProcessor
 from tqdm import tqdm
 
-from model import ModelArgs, Transformer
+from config import ModelArgs
+from model import Transformer
 
 
 class LLama:

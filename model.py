@@ -1,28 +1,10 @@
 import math
-from dataclasses import dataclass
-from typing import Optional
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-
-@dataclass
-class ModelArgs:
-    dim: int = 4096
-    n_layers: int = 32
-    n_heads: int = 32  # nheads for query
-    n_kv_heads: Optional[int] = None  # nheads for key and V
-    vocab_size: int = -1  # will be set when loading the tokenizer/
-    multiple_of: int = 256
-    ffn_dim_multiplier: Optional[float] = None
-    norm_eps: float = 1e-5
-
-    # Needed for KV cache
-    max_batch_size: int = 32
-    max_seq_length: int = 2048
-
-    device: str = None
+from config import ModelArgs
 
 
 def precompute_theta_pos_frequencies(head_dim: int, seq_length: int, device: str, theta: float = 10000):
