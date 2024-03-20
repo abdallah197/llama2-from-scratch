@@ -2,13 +2,17 @@
 from typing import Dict
 
 import torch
-import torch.nn as nn
+from torch.optim import AdamW
+from torch.optim.lr_scheduler import LambdaLR
 from torch.utils.data import DataLoader
+
+from model import Transformer
 
 
 @torch.no_grad()
-def estimate_loss(model: nn.Module, eval_iters: int, train_dataloader: DataLoader, eval_dataloader: DataLoader) -> Dict[
-    str, float]:
+def estimate_loss(model: Transformer, eval_iters: int, train_dataloader: DataLoader, eval_dataloader: DataLoader) -> \
+        Dict[
+            str, float]:
     """
     Estimate the average loss of a model over a fixed number of iterations for both training and evaluation data.
 
@@ -36,3 +40,9 @@ def estimate_loss(model: nn.Module, eval_iters: int, train_dataloader: DataLoade
         average_losses[key] = losses.mean().item()
     model.train()
     return average_losses
+
+
+def train(model: Transformer, n_epochs: int, log_interval: int, eval_iters: int, lr: float, optimizer: AdamW,
+          scheduler: LambdaLR = None):
+# TODO
+# 1. create the optimizer,and the scheduler

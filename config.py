@@ -25,6 +25,6 @@ class ModelArgs:
 @dataclass
 class TrainConfig(ModelArgs):
     n_epocs: int = 10
-    eval_interval: int = 10
+    log_interval: int = 10
     eval_iters: int = 200
     lr: float = 3e-4
