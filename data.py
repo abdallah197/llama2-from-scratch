@@ -83,11 +83,11 @@ class TextFileDataset(Dataset):
         # Truncate the line if necessary
         tokenized_line = tokenized_line[:self.max_sequence_length]
 
-        # Pad the sequence to the max sequence length
+        # Pad the sequence to the max sequence length.
         padding_length = self.max_sequence_length - len(tokenized_line)
         if padding_length > 0:
             tokenized_line.extend([self.pad_token_id] * padding_length)
-
+        assert len(tokenized_line) == self.max_sequence_length
         return torch.tensor(tokenized_line, dtype=torch.long, device=self.device)
 
 
