@@ -383,7 +383,7 @@ class Transformer(nn.Module):
                                                               self.args.max_seq_length * 2,
                                                               device=self.args.device)
 
-    def forward(self, tokens: torch.Tensor, start_pos: int):
+    def forward(self, tokens: torch.Tensor, start_pos: int, targets=None):
         # (B, seq_length)
         batch_size, seq_len = tokens.shape
         assert seq_len == 1  # only one token at a time can be processed.
@@ -400,4 +400,12 @@ class Transformer(nn.Module):
 
         h = self.norm(h)
         output = self.output(h).float()
-        return output
+        if targets is None:
+            loss = None
+        else:
+            B, T, C = output.shape
+            output_ = output.view(B * T, C)
+            targets = targets.view(B * T)
+            loss = F.cross_entropy(output_, targets)
+
+        return output, loss

@@ -103,7 +103,7 @@ class LLama:
 
         for cur_pos in cur_iterator:
             with torch.no_grad():
-                logits = self.model.forward(tokens[:, cur_pos - 1:cur_pos], cur_pos)
+                logits, _ = self.model.forward(tokens[:, cur_pos - 1:cur_pos], cur_pos)
             if temperature > 0:
                 # the temperature is applied before the softmax. we only take the last token. hence the logits[:, -1]
                 probs = torch.softmax(logits[:, -1] / temperature, dim=-1)
