@@ -151,7 +151,9 @@ class SelfAttention(nn.Module):
         self.n_rep = self.n_heads_q // self.n_kv_heads
         # Determine the dimension of each head based on the model dimension and the number of heads
         self.head_dim = args.dim // args.n_heads
-
+        # specify the mode inference/run
+        self.mode = args.mode
+        assert self.mode in ['inference', 'for_development']
         # Linear transformations for queries, keys, and values
         self.wq = nn.Linear(args.dim, self.head_dim * self.n_heads_q, bias=False)
         self.wk = nn.Linear(args.dim, self.head_dim * self.n_kv_heads, bias=False)
@@ -163,15 +165,17 @@ class SelfAttention(nn.Module):
         self.cache_k = torch.zeros(args.max_batch_size, args.max_seq_length, self.n_kv_heads, self.head_dim)
         self.cache_v = torch.zeros(args.max_batch_size, args.max_seq_length, self.n_kv_heads, self.head_dim)
 
+        self.device = args.device
+
     def forward(self, x: torch.Tensor, start_pos: int, m_theta_complex: torch.Tensor) -> torch.Tensor:
         """Forward pass for the SelfAttention module, computes attention scores and applies them to the input."""
         batch_size, seq_length, _ = x.shape  # Input shape: (Batch Size, Sequence Length, Head Dimension)
         # (B, 1, Dim) ->  # (B, 1, HQ * Head dim)
-        xq = self.wq(x)
+        xq = self.wq(x).to(self.device)
         # (B, 1, Dim) ->  # (B, 1, H_KV * Head dim)
-        xk = self.wk(x)
+        xk = self.wk(x).to(self.device)
         # (B, 1, Dim) ->  # (B, 1, H_KV * Head dim)
-        xv = self.wv(x)
+        xv = self.wv(x).to(self.device)
 
         # (batch_size, 1, H_Q * Head Dim) --> (batch_size, 1, H_Q,  Head Dim)
         xq = xq.view(batch_size, seq_length, self.n_heads_q, self.head_dim)
@@ -185,7 +189,7 @@ class SelfAttention(nn.Module):
         xk = apply_rotary_embeddings(xk, m_theta_complex, device=x.device)
 
         # During inference, we apply KV cache.
-        if not self.training:
+        if self.mode == 'inference':
             # replace the entry in the cache for this token.
             # we update the KV cache by appending the current attention calculations
             self.cache_k[:batch_size, start_pos:start_pos + seq_length] = xk
@@ -196,7 +200,7 @@ class SelfAttention(nn.Module):
             keys = self.cache_k[:batch_size, 0:start_pos + seq_length]
             values = self.cache_v[:batch_size, 0:start_pos + seq_length]
         else:
-            keys, values = xk, xv
+            keys, values = xk.to(self.device), xv.to(self.device)
 
         # Repeat the heads of K, V to reach the number of heads of Q.
         # This is a shortcut and not the optimized solution to implement Grouped Query attention

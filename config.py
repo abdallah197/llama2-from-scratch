@@ -14,7 +14,7 @@ class ModelArgs:
     multiple_of: int = 256
     ffn_dim_multiplier: Optional[float] = None
     norm_eps: float = 1e-5
-
+    mode: str = 'for_development'
     # Needed for KV cache
     max_batch_size: int = 32
     max_seq_length: int = 32

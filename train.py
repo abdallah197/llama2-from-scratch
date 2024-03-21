@@ -35,7 +35,7 @@ def estimate_loss(model: Transformer, eval_iters: int, train_dataloader: DataLoa
         for i in range(eval_iters):
             inputs, targets = next(iter(dataloader))
 
-            logits, loss = model(inputs, targets)
+            logits, loss = model(inputs, 0, targets)
             losses[i] = loss.item()
         key = 'train' if dataloader == train_dataloader else 'eval'
 
