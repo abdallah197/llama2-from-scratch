@@ -65,6 +65,8 @@ def train(model: Transformer, train_config: TrainArgs, train_dataloader: DataLoa
                              warmup=train_config.warmup_steps,
                          ))
     losses = []
+    best_eval_loss = float('inf')
+
     for epoch in tqdm(range(train_config.n_epochs)):
         model.train()
         for i, (X, Y) in enumerate(train_dataloader):
@@ -84,5 +86,12 @@ def train(model: Transformer, train_config: TrainArgs, train_dataloader: DataLoa
                 print(
                     f'Epoch: {epoch}, Batch: {i + 1}/{len(train_dataloader)} | train_loss: {out["train"]:.2f}, '
                     f'eval_loss: {out["eval"]:.2f}')
+
+            # save the model if it was outperforming the previous best model
+            cur_eval_loss = losses[-1]['eval']
+            if cur_eval_loss < best_eval_loss:
+                torch.save(model.state_dict(), f"best_model_eval{cur_eval_loss:.2nf}_epoch{epoch}.pth")
+                cur_eval_loss = best_eval_loss
+                print(f"New best model saved with eval_loss: {cur_eval_loss:.2f}")
 
     return losses
