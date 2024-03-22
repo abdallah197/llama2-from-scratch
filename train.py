@@ -82,7 +82,7 @@ def train(model: Transformer, train_config: TrainArgs, train_dataloader: DataLoa
                                     eval_iters=train_config.eval_iters,
                                     train_dataloader=train_dataloader,
                                     eval_dataloader=eval_dataloader)
-                losses.extend(out)
+                losses.extend([out])
                 print(
                     f'Epoch: {epoch}, Batch: {i + 1}/{len(train_dataloader)} | train_loss: {out["train"]:.2f}, '
                     f'eval_loss: {out["eval"]:.2f}')
