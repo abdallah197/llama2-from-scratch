@@ -66,22 +66,23 @@ def train(model: Transformer, train_config: TrainArgs, train_dataloader: DataLoa
                          ))
     losses = []
     for epoch in tqdm(range(train_config.n_epochs)):
-
-        # train the model
         model.train()
-        for X, Y in train_dataloader:
+        for i, (X, Y) in enumerate(train_dataloader):
             optimizer.zero_grad()
             logits, loss = model(X, 0, Y)
             loss.backward()
             optimizer.step()
             scheduler.step()
 
-            # if epoch % train_config.log_interval == 0:
-            out = estimate_loss(model=model,
-                                eval_iters=train_config.eval_iters,
-                                train_dataloader=train_dataloader,
-                                eval_dataloader=eval_dataloader)
-            losses.extend(out)
-            print(f'Epoch: {epoch} | train_loss: {out["train"]:.2f}, eval_loss: {out["eval"]:.2f}')
+            # Log every log_interval batches
+            if (i + 1) % train_config.log_interval == 0:
+                out = estimate_loss(model=model,
+                                    eval_iters=train_config.eval_iters,
+                                    train_dataloader=train_dataloader,
+                                    eval_dataloader=eval_dataloader)
+                losses.extend(out)
+                print(
+                    f'Epoch: {epoch}, Batch: {i + 1}/{len(train_dataloader)} | train_loss: {out["train"]:.2f}, '
+                    f'eval_loss: {out["eval"]:.2f}')
 
     return losses
