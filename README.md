@@ -6,17 +6,6 @@ reproducing and extending some of the key features that distinguish LLaMA 2, inc
 activation function, Rotary Positional Embeddings (RoPE), increased context length with Grouped-Query Attention (GQA),
 and the KV-caching technique.
 
-## Table of Contents
-
-- [Introduction](#introduction)
-- [Features](#features)
-- [Installation](#installation)
-- [Usage](#usage)
-- [Training Results](#training results)
-- [Configuration](#configuration)
-- [Examples](#examples)
-- [Acknowledgments](#acknowledgments)
-
 ## Introduction 📘
 
 This project aims to build the LLaMA 2 architecture from scratch, incorporating essential advancements in transformer
