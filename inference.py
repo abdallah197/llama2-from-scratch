@@ -1,3 +1,4 @@
+import argparse
 import json
 import os
 import time
@@ -11,6 +12,9 @@ from tqdm import tqdm
 from config import ModelArgs
 from model import Transformer
 
+parser = argparse.ArgumentParser(description="Run inference with multiple prompts.")
+parser.add_argument('prompts', nargs='+', help='List of prompts for inference')
+args = parser.parse_args()
 
 class LLama:
 
@@ -180,9 +184,6 @@ class LLama:
 
 if __name__ == '__main__':
     torch.manual_seed(0)
-    prompts = [
-        'As a Sudanese, I'
-    ]
     allow_cuda = False
     device = 'cuda' if torch.cuda.is_available() and allow_cuda else 'cpu'
     model = LLama.build(
@@ -190,9 +191,9 @@ if __name__ == '__main__':
         tokenizer_path='tokenizer.model',
         load_model=True,
         max_seq_len=10,
-        max_batch_size=len(prompts),
+        max_batch_size=len(args.prompts),
         device=device
     )
-    out_tokens, out_text = model.generate(prompts, max_gen_len=100)
+    out_tokens, out_text = model.generate(args.prompts, max_gen_len=100)
     print(out_text)
     print('All Ok')

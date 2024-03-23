@@ -80,6 +80,15 @@ train_args = TrainArgs(lr=5e-4, n_epochs=20)
 data_args = DataArgs(filepath='new_dataset.txt')
 ```
 
+I adjustd the model original HP to fit my compute. Here's a summary of the main configuration settings:
+
+- Model Dimensionality: 2048
+- Number of Transformer Layers: 32
+- Number of Query Attention Heads: 32
+- Optional Number of Heads for Key and Value (n_kv_heads): Can be set for specific requirements
+- Vocabulary Size: Set dynamically upon loading the llama2 Sentence Piece tokenizer.
+- Operating Mode: 'train/inference', when choosing inference, we apply KV-Cache.
+
 ## Acknowledgments
 
 This project has been inspired and informed by various resources and individuals in the AI and machine learning
