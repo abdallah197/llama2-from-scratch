@@ -41,6 +41,13 @@ cd llama2-from-scratch
 pip install -r requirements.txt
 ```
 
+## Training Results 📊
+
+After the training and evaluation phases, we can see a consistent drop in both training and evaluation losses,
+indicating the model's learning effectiveness. Below is a plot demonstrating this trend over the training steps.
+
+![losses.png](losses.png)
+
 ## Usage 🚀
 
 This section guides you through the process of using the repository for inference, ensuring you can easily generate
@@ -70,13 +77,6 @@ The repo only have [Top P](https://huggingface.co/blog/how-to-generate#top-p-nuc
 ```bash
 python inference.py "Your first prompt" "Your second prompt"
 ```
-
-## Training Results 📊
-
-After the training and evaluation phases, we can see a consistent drop in both training and evaluation losses,
-indicating the model's learning effectiveness. Below is a plot demonstrating this trend over the training steps.
-
-![losses.png](losses.png)
 
 ## Configuration ⚙️
 
