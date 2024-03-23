@@ -1,8 +1,101 @@
-from typing import List, Tuple
+from typing import List
+from typing import Tuple
 
 import sentencepiece as spm
 import torch
 from torch.utils.data import Dataset, random_split, DataLoader
+
+
+class Tokenizer:
+    def __init__(self, file_path: str):
+        with open(file_path, 'r', encoding='utf-8') as file:
+            self.text = file.read()
+
+        self.chars = sorted(list(set(self.text)))
+        self.stoi = {ch: i for i, ch in enumerate(self.chars)}
+        self.itos = {i: ch for i, ch in enumerate(self.chars)}
+        self.vocab_size = len(self.chars)
+
+    def encode(self, sentence: str):
+        """
+
+        :param sentence: sentence
+        :return: list of idx
+        """
+        return [self.stoi[ch] for ch in sentence]
+
+    def decode(self, idxs: List[int]):
+        """
+
+        :param idxs: list of idx
+        :return:
+        """
+        return "".join([self.itos[idx] for idx in idxs])
+
+
+class TextDataset(Dataset):
+    """Dataset for reading lines from a text file and processing for NLP tasks.
+
+    Attributes:
+        max_seq_len (int): Maximum length of the tokenized sequences.
+        tokenizer: Tokenizer function to encode text lines.
+        device (str): The device type where tensors will be allocated.
+    """
+
+    def __init__(self, file_path: str, tokenizer: Tokenizer, max_seq_len: int, device: str = 'cpu') -> None:
+        """
+        Initializes the dataset from a text file.
+
+        Args:
+            file_path (str): Path to the text file.
+            tokenizer: Tokenizer function to convert text lines into encoded tokens.
+            max_seq_len (int): The maximum allowed length for a sequence of tokens.
+            device (str): The type of device to store the tensors (e.g., 'cpu', 'cuda').
+            pad_token_id (int, optional): The token ID used for padding. Defaults to 0.
+        """
+        self.max_seq_len = max_seq_len
+        self.tokenizer = tokenizer
+        self.device = device
+        with open(file_path, 'r', encoding='utf-8') as file:
+            self.text = file.read()
+        self.text_blocks = self.create_text_blocks()
+
+    def create_text_blocks(self):
+        text_length = len(self.text)
+
+        # Calculate the number of blocks and create indices for block starts
+        num_blocks = (text_length - 1) // self.max_seq_len + 1
+        start_indices = torch.arange(0, num_blocks * self.max_seq_len, self.max_seq_len)
+
+        # Slice the text into blocks
+        text_blocks = [self.text[start_idx:start_idx + self.max_seq_len] for start_idx in start_indices]
+
+        return text_blocks
+
+    def __len__(self) -> int:
+        """Determines the number of items in the dataset.
+
+        Returns:
+            int: The total number of lines in the file.
+        """
+        return len(self.text_blocks)
+
+    def __getitem__(self, index: int) -> torch.Tensor:
+        """Retrieves an item by its index from the dataset.
+
+        Args:
+            index (int): The index of the item.
+
+        Returns:
+            torch.Tensor: A tensor containing the token IDs of the processed text line.
+        """
+        line = self.text_blocks[index]
+        tokenized_line = self.tokenizer.encode(line)
+
+        # Truncate the line if necessary
+        tokenized_line = tokenized_line[:self.max_seq_len]
+        assert len(tokenized_line) == self.max_seq_len
+        return torch.tensor(tokenized_line, dtype=torch.long, device=self.device)
 
 
 def llama_collate_fn(batch: List[torch.Tensor]) -> Tuple[torch.Tensor, torch.Tensor]:
