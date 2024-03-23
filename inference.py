@@ -9,7 +9,7 @@ import torch
 from sentencepiece import SentencePieceProcessor
 from tqdm import tqdm
 
-from config import ModelArgs
+from config import ModelArgs, InferenceArgs
 from model import Transformer
 
 parser = argparse.ArgumentParser(description="Run inference with multiple prompts.")
@@ -22,6 +22,7 @@ class LLama:
         self.model = model
         self.tokenizer = tokenizer
         self.args = model_args
+        self.device = model_args.device
 
     @staticmethod
     def build(checkpoint_dir: str, tokenizer_path: str, load_model: bool,
@@ -103,11 +104,11 @@ class LLama:
 
         # create the list that contain the generated tokens, along with the prompt tokens
         pad_id = self.tokenizer.pad_id()
-        tokens = torch.full((batch_size, total_len), pad_id, dtype=torch.long, device=device)
+        tokens = torch.full((batch_size, total_len), pad_id, dtype=torch.long, device=self.device)
 
         for k, t in enumerate(prompt_tokens):
-            tokens[k, : len(t)] = torch.tensor(t, dtype=torch.long, device=device)
-        eos_reached = torch.tensor([False] * batch_size, device=device)
+            tokens[k, : len(t)] = torch.tensor(t, dtype=torch.long, device=self.device)
+        eos_reached = torch.tensor([False] * batch_size, device=self.device)
         prompt_tokens_mask = tokens != pad_id  # True if the token is a prompt token, False otherwise
         cur_iterator = tqdm(range(1, total_len), desc="Generating tokens")
 
@@ -184,15 +185,16 @@ class LLama:
 
 if __name__ == '__main__':
     torch.manual_seed(0)
+    inference_args = InferenceArgs()
     allow_cuda = False
     device = 'cuda' if torch.cuda.is_available() and allow_cuda else 'cpu'
     model = LLama.build(
-        checkpoint_dir='llama-2-7b',
-        tokenizer_path='tokenizer.model',
-        load_model=True,
-        max_seq_len=10,
+        checkpoint_dir=inference_args.checkpoint_dir,
+        tokenizer_path=inference_args.tokenizer_path,
+        load_model=inference_args.load_model,
+        max_seq_len=inference_args.max_seq_len,
         max_batch_size=len(args.prompts),
-        device=device
+        device=inference_args.device
     )
     out_tokens, out_text = model.generate(args.prompts, max_gen_len=100)
     print(out_text)

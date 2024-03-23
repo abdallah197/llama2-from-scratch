@@ -36,3 +36,11 @@ class DataArgs(ModelArgs):
     filepath: str = 'input.txt'
     tokenizer_model_path: str = 'tokenizer.model'
     train_size: float = 0.9
+
+
+@dataclass
+class InferenceArgs(ModelArgs):
+    checkpoint_dir: str = 'llama-2-7b'
+    tokenizer_path: str = 'tokenizer.model'
+    load_model: bool = True
+    max_seq_len: int = 10
