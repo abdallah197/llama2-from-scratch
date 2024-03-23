@@ -36,8 +36,8 @@ longer context windows and enhancing the model's positional understanding.
 To install the necessary dependencies, clone this repository and run:
 
 ```bash
-git clone https://github.com/your-repo/LLaMA-2-Custom.git
-cd LLaMA-2-Custom
+git  clone https://github.com/abdallah197/llama2-from-scratch.git
+cd llama2-from-scratch
 pip install -r requirements.txt
 ```
 
