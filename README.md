@@ -58,7 +58,9 @@ pip install -r requirements.txt
 
 After the training and evaluation phases, we can see a consistent drop in both training and evaluation losses,
 indicating the model's learning effectiveness. Below is a plot demonstrating this trend over the training steps.
-![img.png](img.png)
+
+![losses.png](losses.png)
+
 ## Configuration
 
 The configuration for the model and training is defined using data classes in Python. You can adjust these
