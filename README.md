@@ -54,6 +54,15 @@ cd LLaMA-2-Custom
 pip install -r requirements.txt
 ```
 
+## Usage
+
+To use the repo for inference:
+
+1. Download llama2 SentencePiece tokenizer model [here](https://llama.meta.com/llama-downloads/).
+2. Either download llama weights by following steps [here](https://llama.meta.com/llama-downloads/) / or use the repo to
+   train your own llama2.
+3. Set your inference configuration in config.py
+4. pass your list of prompts to the terminal by running `python inference.py prompt1 prompt2 `
 ## Training Results
 
 After the training and evaluation phases, we can see a consistent drop in both training and evaluation losses,

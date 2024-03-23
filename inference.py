@@ -196,6 +196,9 @@ if __name__ == '__main__':
         max_batch_size=len(args.prompts),
         device=inference_args.device
     )
-    out_tokens, out_text = model.generate(args.prompts, max_gen_len=100)
+    out_tokens, out_text = model.generate(args.prompts,
+                                          temperature=inference_args.temperature,
+                                          top_p=inference_args.top_p,
+                                          max_gen_len=100)
     print(out_text)
     print('All Ok')

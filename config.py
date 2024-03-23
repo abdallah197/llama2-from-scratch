@@ -44,3 +44,5 @@ class InferenceArgs(ModelArgs):
     tokenizer_path: str = 'tokenizer.model'
     load_model: bool = True
     max_seq_len: int = 10
+    temperature: float = 0.6
+    top_p: float = 0.9
