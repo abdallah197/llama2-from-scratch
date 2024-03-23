@@ -11,22 +11,20 @@ and the KV-caching technique.
 - [Introduction](#introduction)
 - [Features](#features)
 - [Installation](#installation)
-- [Usage](#usage) #todo
-- [Training Results](#training results) #todo
+- [Usage](#usage)
+- [Training Results](#training results)
 - [Configuration](#configuration)
-- [Examples](#examples) #todo
+- [Examples](#examples)
 - [Acknowledgments](#acknowledgments)
 
-# todo: add emojies
-
-## Introduction
+## Introduction 📘
 
 This project aims to build the LLaMA 2 architecture from scratch, incorporating essential advancements in transformer
 models. Key enhancements include RMS-Normalization, SwiGLU activation, Rotary Positional Embeddings, and advanced
 attention mechanisms like Grouped-Query Attention, all designed to improve model performance, particularly in handling
 longer context windows and enhancing the model's positional understanding.
 
-## Features
+## Features ✨
 
 - **RMS-Normalization**: A simplified version of layer normalization that stabilizes layer activations and aids in model
   convergence.
@@ -44,7 +42,7 @@ longer context windows and enhancing the model's positional understanding.
   on their cumulative probability.
 - **Data & Training Utilities**: The project adds torch wrappers to onboard with pretriaing on any `.txt` file.
 
-## Installation
+## Installation 🔧
 
 To install the necessary dependencies, clone this repository and run:
 
@@ -54,23 +52,44 @@ cd LLaMA-2-Custom
 pip install -r requirements.txt
 ```
 
-## Usage
+## Usage 🚀
 
-To use the repo for inference:
+This section guides you through the process of using the repository for inference, ensuring you can easily generate
+outputs from the LLaMA 2 model. Follow these steps to set up and run inference tasks:
 
-1. Download llama2 SentencePiece tokenizer model [here](https://llama.meta.com/llama-downloads/).
-2. Either download llama weights by following steps [here](https://llama.meta.com/llama-downloads/) / or use the repo to
-   train your own llama2.
-3. Set your inference configuration in config.py
-4. pass your list of prompts to the terminal by running `python inference.py prompt1 prompt2 `
-## Training Results
+### Setting Up
+
+1. **Tokenizer**: Begin by downloading the LLaMA 2 SentencePiece tokenizer model, necessary for preprocessing your input
+   text. You can find the tokenizer [here](https://llama.meta.com/llama-downloads/). Ensure that you place the
+   downloaded model in an accessible directory within your project.
+
+2. **Model Weights**: You have two options for obtaining the model weights:
+    - **Download Pre-trained Weights**: Follow the instructions provided [here](https://llama.meta.com/llama-downloads/)
+      to download the official LLaMA model weights.
+    - **Train Your Own Model**: Alternatively, you can train your own LLaMA 2 model using this repository.
+
+3. **Configuration**: Configure your inference settings in the `config.py` file. This file should include settings such
+   as the path to the model weights, the tokenizer model, and any other inference parameters like the maximum sequence
+   length.
+
+### Running Inference
+
+Once you have set up the tokenizer and the model weights, and configured your inference settings, you can run inference
+by passing a list of prompts through the command line:
+The repo only have [Top P](https://huggingface.co/blog/how-to-generate#top-p-nucleus-sampling) sampling at the moment
+
+```bash
+python inference.py "Your first prompt" "Your second prompt"
+```
+
+## Training Results 📊
 
 After the training and evaluation phases, we can see a consistent drop in both training and evaluation losses,
 indicating the model's learning effectiveness. Below is a plot demonstrating this trend over the training steps.
 
 ![losses.png](losses.png)
 
-## Configuration
+## Configuration ⚙️
 
 The configuration for the model and training is defined using data classes in Python. You can adjust these
 configurations to suit your dataset and training needs.
@@ -89,7 +108,7 @@ train_args = TrainArgs(lr=5e-4, n_epochs=20)
 data_args = DataArgs(filepath='new_dataset.txt')
 ```
 
-I adjustd the model original HP to fit my compute. Here's a summary of the main configuration settings:
+I adjusted the model original HP to fit my compute. Here's a summary of the main configuration settings:
 
 - Model Dimensionality: 2048
 - Number of Transformer Layers: 32
@@ -98,7 +117,7 @@ I adjustd the model original HP to fit my compute. Here's a summary of the main 
 - Vocabulary Size: Set dynamically upon loading the llama2 Sentence Piece tokenizer.
 - Operating Mode: 'train/inference', when choosing inference, we apply KV-Cache.
 
-## Acknowledgments
+## Acknowledgments 💖
 
 This project has been inspired and informed by various resources and individuals in the AI and machine learning
 community. We'd like to extend our gratitude to the following:
