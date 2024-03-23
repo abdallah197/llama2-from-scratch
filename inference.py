@@ -1,4 +1,5 @@
 import json
+import os
 import time
 from pathlib import Path
 from typing import List, Optional
@@ -32,8 +33,11 @@ class LLama:
             checkpoint = torch.load(chk_path)
             print(f'Loaded checkpoint in {(time.time() - prev_time):.2f} seconds')
             prev_time = time.time()
-        with open(Path(checkpoint_dir) / 'params.json', 'r') as f:
-            params = json.loads(f.read())
+        if os.path.exists(Path(checkpoint_dir) / 'params.json'):
+            with open(Path(checkpoint_dir) / 'params.json', 'r') as f:
+                params = json.loads(f.read())
+        else:
+            params = {}
 
         model_args: ModelArgs = ModelArgs(
             max_batch_size=max_batch_size,
@@ -59,7 +63,8 @@ class LLama:
 
         if load_model:
             # we don't need to load the Rope embeddings
-            del checkpoint['rope.freqs']
+            if 'rope.freqs' in checkpoint:
+                del checkpoint['rope.freqs']
             model.load_state_dict(checkpoint, strict=True)
             print(f'Loaded state dict in {(time.time() - prev_time):.2f}')
         return LLama(model, tokenizer, model_args)
