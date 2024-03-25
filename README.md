@@ -1,4 +1,4 @@
-# LLaMA 2 from scratch
+# LLaMA 2 from scratch 🦙
 
 This repository contains a custom implementation of the LLaMA 2 model, as described in the paper "LLaMA 2: Open
 Foundation and Fine-Tuned Chat Models" ([ArXiv](https://arxiv.org/abs/2307.09288)). This implementation focuses on
