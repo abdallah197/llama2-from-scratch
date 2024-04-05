@@ -220,7 +220,16 @@ def create_dataloaders(
     """
     train_dataset, eval_dataset = split_dataset(dataset, train_split_ratio)
 
-    train_dataloader = DataLoader(train_dataset, batch_size=batch_size, collate_fn=llama_collate_fn)
-    eval_dataloader = DataLoader(eval_dataset, batch_size=batch_size, collate_fn=llama_collate_fn)
+    train_dataloader = DataLoader(train_dataset,
+                                  batch_size=batch_size,
+                                  num_workers=128,
+                                  pin_memory=True,
+                                  persistent_workers=True,
+                                  collate_fn=llama_collate_fn)
+    eval_dataloader = DataLoader(eval_dataset, batch_size=batch_size,
+                                 num_workers=128,
+                                 pin_memory=True,
+                                 persistent_workers=True,
+                                 collate_fn=llama_collate_fn)
 
     return train_dataloader, eval_dataloader
