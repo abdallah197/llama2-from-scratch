@@ -36,11 +36,10 @@ class TextFileDataset(Dataset):
         max_sequence_length (int): Maximum length of the tokenized sequences.
         pad_token_id (int): ID to use for padding tokens.
         tokenizer: Tokenizer function to encode text lines.
-        device (str): The device type where tensors will be allocated.
         lines (List[str]): List of lines read from the text file.
     """
 
-    def __init__(self, file_path: str, tokenizer: spm.SentencePieceProcessor, max_sequence_length: int, device: str,
+    def __init__(self, file_path: str, tokenizer: spm.SentencePieceProcessor, max_sequence_length: int,
                  pad_token_id: int = 0) -> None:
         """
         Initializes the dataset from a text file.
@@ -49,13 +48,11 @@ class TextFileDataset(Dataset):
             file_path (str): Path to the text file.
             tokenizer: Tokenizer function to convert text lines into encoded tokens.
             max_sequence_length (int): The maximum allowed length for a sequence of tokens.
-            device (str): The type of device to store the tensors (e.g., 'cpu', 'cuda').
             pad_token_id (int, optional): The token ID used for padding. Defaults to 0.
         """
         self.max_sequence_length = max_sequence_length
         self.pad_token_id = pad_token_id
         self.tokenizer = tokenizer
-        self.device = device
 
         with open(file_path, 'r', encoding='utf-8') as file:
             self.lines = [line.strip() for line in file]
@@ -88,7 +85,7 @@ class TextFileDataset(Dataset):
         if padding_length > 0:
             tokenized_line.extend([self.pad_token_id] * padding_length)
         assert len(tokenized_line) == self.max_sequence_length
-        return torch.tensor(tokenized_line, dtype=torch.long, device=self.device)
+        return torch.tensor(tokenized_line, dtype=torch.long)
 
 
 def split_dataset(dataset: Dataset, train_split_ratio: float) -> Tuple[Dataset, Dataset]:
