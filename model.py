@@ -153,7 +153,7 @@ class SelfAttention(nn.Module):
         self.head_dim = args.dim // args.n_heads
         # specify the mode inference/run
         self.mode = args.mode
-        assert self.mode in ['inference', 'for_development']
+        assert self.mode in ['inference', 'train']
         # Linear transformations for queries, keys, and values
         self.wq = nn.Linear(args.dim, self.head_dim * self.n_heads_q, bias=False)
         self.wk = nn.Linear(args.dim, self.head_dim * self.n_kv_heads, bias=False)
