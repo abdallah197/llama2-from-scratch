@@ -46,3 +46,8 @@ class InferenceArgs(ModelArgs):
     max_seq_len: int = 10
     temperature: float = 0.6
     top_p: float = 0.9
+
+
+@dataclass
+class DeepspeedArgs(ModelArgs):
+    pass
