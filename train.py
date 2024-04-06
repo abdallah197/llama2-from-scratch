@@ -12,9 +12,8 @@ from model import Transformer
 
 
 @torch.no_grad()
-def estimate_loss(model: Transformer, eval_iters: int, train_dataloader: DataLoader, eval_dataloader: DataLoader) -> \
-        Dict[
-            str, float]:
+def estimate_loss(model: Transformer, eval_iters: int, train_dataloader: DataLoader, eval_dataloader: DataLoader,
+                  device: str) -> Dict[str, float]:
     """
     Estimate the average loss of a model over a fixed number of iterations for both training and evaluation data.
 
@@ -34,6 +33,7 @@ def estimate_loss(model: Transformer, eval_iters: int, train_dataloader: DataLoa
         losses = torch.zeros(eval_iters)
         for i in range(eval_iters):
             inputs, targets = next(iter(dataloader))
+            inputs, targets = inputs.to(device), targets.to(device)
 
             logits, loss = model(inputs, 0, targets)
             losses[i] = loss.item()
@@ -70,6 +70,7 @@ def train(model: Transformer, train_config: TrainArgs, train_dataloader: DataLoa
     for epoch in tqdm(range(train_config.n_epochs)):
         model.train()
         for i, (X, Y) in enumerate(train_dataloader):
+
             optimizer.zero_grad()
             logits, loss = model(X, 0, Y)
             loss.backward()
@@ -81,7 +82,8 @@ def train(model: Transformer, train_config: TrainArgs, train_dataloader: DataLoa
                 out = estimate_loss(model=model,
                                     eval_iters=train_config.eval_iters,
                                     train_dataloader=train_dataloader,
-                                    eval_dataloader=eval_dataloader)
+                                    eval_dataloader=eval_dataloader,
+                                    device=train_config.device)
                 losses.extend([out])
                 print(
                     f'Epoch: {epoch}, Batch: {i + 1}/{len(train_dataloader)} | train_loss: {out["train"]:.2f}, '
