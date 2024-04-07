@@ -26,7 +26,7 @@ class LLama:
 
     @staticmethod
     def build(checkpoint_dir: str, tokenizer_path: str, load_model: bool,
-              max_seq_len: int, max_batch_size: int, device: str):
+              max_seq_len: int, batch_size: int, device: str):
         prev_time = time.time()
 
         # load the checkpoint of the model
@@ -45,7 +45,7 @@ class LLama:
             params = {}
 
         model_args: ModelArgs = ModelArgs(
-            max_batch_size=max_batch_size,
+            batch_size=batch_size,
             device=device,
             max_seq_length=max_seq_len,
             **params
@@ -94,8 +94,8 @@ class LLama:
         prompt_tokens = [self.tokenizer.encode(prompt, out_type=int, add_bos=True, add_eos=False) for prompt in prompts]
         # Make sure the batch size is not too large
         batch_size = len(prompt_tokens)
-        assert batch_size <= self.args.max_batch_size, (f"batch size must be less than"
-                                                        f" or equal to {self.args.max_batch_size}")
+        assert batch_size <= self.args.batch_size, (f"batch size must be less than"
+                                                    f" or equal to {self.args.batch_size}")
         max_prompt_len = max(len(prompt) for prompt in prompt_tokens)
         # Make sure the prompt length is not larger than the maximum sequence length
         assert max_prompt_len <= self.args.max_seq_length, (f"prompt length must be less than"
@@ -193,7 +193,7 @@ if __name__ == '__main__':
         tokenizer_path=inference_args.tokenizer_path,
         load_model=inference_args.load_model,
         max_seq_len=inference_args.max_seq_len,
-        max_batch_size=len(args.prompts),
+        batch_size=len(args.prompts),
         device=inference_args.device
     )
     out_tokens, out_text = model.generate(args.prompts,

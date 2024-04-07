@@ -162,8 +162,8 @@ class SelfAttention(nn.Module):
         self.wo = nn.Linear(self.head_dim * self.n_heads_q, args.dim, bias=False)
 
         # Initialize caches for keys and values to zeros
-        self.cache_k = torch.zeros(args.max_batch_size, args.max_seq_length, self.n_kv_heads, self.head_dim)
-        self.cache_v = torch.zeros(args.max_batch_size, args.max_seq_length, self.n_kv_heads, self.head_dim)
+        self.cache_k = torch.zeros(args.batch_size, args.max_seq_length, self.n_kv_heads, self.head_dim)
+        self.cache_v = torch.zeros(args.batch_size, args.max_seq_length, self.n_kv_heads, self.head_dim)
 
         self.device = args.device
 

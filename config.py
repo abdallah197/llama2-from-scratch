@@ -16,7 +16,7 @@ class ModelArgs:
     norm_eps: float = 1e-5
     mode: str = 'train'
     # Needed for KV cache
-    max_batch_size: int = 32
+    batch_size: int = 32
     max_seq_length: int = 32
 
     device: str = 'cuda' if torch.cuda.is_available() else 'cpu'
