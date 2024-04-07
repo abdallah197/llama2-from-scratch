@@ -50,4 +50,5 @@ class InferenceArgs(ModelArgs):
 
 @dataclass
 class DeepspeedArgs(ModelArgs):
-    pass
+    deepspeed: bool = True  # Whether to use deepspeed or not.
+    fp16: bool = False

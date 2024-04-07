@@ -1,6 +1,8 @@
 """ the file contains utils to train a torch based model| built specifically for llama2"""
+import logging
 from typing import Dict
 
+import deepspeed
 import torch
 from torch.optim import AdamW
 from torch.optim.lr_scheduler import LambdaLR
@@ -56,7 +58,8 @@ def rate(step: int, model_size: int, warmup: int, factor: int = 1):
     )
 
 
-def train(model: Transformer, train_config: TrainArgs, train_dataloader: DataLoader, eval_dataloader: DataLoader):
+def train(model: Transformer, train_config: TrainArgs, train_dataloader: DataLoader, eval_dataloader: DataLoader,
+          args: Dict):
     optimizer = AdamW(model.parameters(), lr=train_config.lr)
     scheduler = LambdaLR(optimizer=optimizer,
                          lr_lambda=lambda step: rate(
@@ -64,26 +67,39 @@ def train(model: Transformer, train_config: TrainArgs, train_dataloader: DataLoa
                              model_size=model.args.dim,
                              warmup=train_config.warmup_steps,
                          ))
+    if args.deepspeed:
+        deepspeed.init_distributed()
+        logging.info('Deepspeed is enabled.')
+        model, optimizer, _, lr_scheduler = deepspeed.initialize(
+            model=model,
+            optimizer=optimizer,
+            args=args,
+            lr_scheduler=scheduler,
+            dist_init_required=False
+        )
     losses = []
     best_eval_loss = float('inf')
 
     for epoch in tqdm(range(train_config.n_epochs)):
         model.train()
         for i, (X, Y) in enumerate(train_dataloader):
-
-            optimizer.zero_grad()
             logits, loss = model(X, 0, Y)
-            loss.backward()
-            optimizer.step()
-            scheduler.step()
+            if args.deepspeed:
+                model.backward(loss)
+                model.step()
+            else:
+                optimizer.zero_grad()
+                loss.backward()
+                optimizer.step()
+                scheduler.step()
 
             # Log every log_interval batches
-            if (i + 1) % train_config.log_interval == 0:
+            if (i + 1) % args['log_interval'] == 0:
                 out = estimate_loss(model=model,
-                                    eval_iters=train_config.eval_iters,
+                                    eval_iters=args['eval_iters'],
                                     train_dataloader=train_dataloader,
                                     eval_dataloader=eval_dataloader,
-                                    device=train_config.device)
+                                    device=args['device'])
                 losses.extend([out])
                 print(
                     f'Epoch: {epoch}, Batch: {i + 1}/{len(train_dataloader)} | train_loss: {out["train"]:.2f}, '
