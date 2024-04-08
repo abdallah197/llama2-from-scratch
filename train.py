@@ -3,6 +3,7 @@ import logging
 from typing import Dict
 
 import deepspeed
+import pandas as pd
 import torch
 from torch.optim import AdamW
 from torch.optim.lr_scheduler import LambdaLR
@@ -58,6 +59,15 @@ def rate(step: int, model_size: int, warmup: int, factor: int = 1):
     )
 
 
+def save_ds_checkpoint(iteration, model, ckpt_id, args):
+    """Save a model checkpoint."""
+    if args['deepspeed']:
+        client_state = {'iteration': iteration}
+        model.save_checkpoint(args['save_dir'], ckpt_id, client_state=client_state)
+    else:
+        torch.save(model.state_dict(), args['save_dir'] + f"/model_{ckpt_id:.2nf}_step{iteration}.pth")
+
+
 def train(model: Transformer, train_config: TrainArgs, train_dataloader: DataLoader, eval_dataloader: DataLoader,
           args: Dict):
     optimizer = AdamW(model.parameters(), lr=train_config.lr)
@@ -67,7 +77,7 @@ def train(model: Transformer, train_config: TrainArgs, train_dataloader: DataLoa
                              model_size=model.args.dim,
                              warmup=train_config.warmup_steps,
                          ))
-    if args.deepspeed:
+    if args['deepspeed']:
         deepspeed.init_distributed()
         logging.info('Deepspeed is enabled.')
         model, optimizer, _, lr_scheduler = deepspeed.initialize(
@@ -84,7 +94,7 @@ def train(model: Transformer, train_config: TrainArgs, train_dataloader: DataLoa
         model.train()
         for i, (X, Y) in enumerate(train_dataloader):
             logits, loss = model(X, 0, Y)
-            if args.deepspeed:
+            if args['deepspeed']:
                 model.backward(loss)
                 model.step()
             else:
@@ -101,15 +111,16 @@ def train(model: Transformer, train_config: TrainArgs, train_dataloader: DataLoa
                                     eval_dataloader=eval_dataloader,
                                     device=args['device'])
                 losses.extend([out])
-                print(
+                logging.info(
                     f'Epoch: {epoch}, Batch: {i + 1}/{len(train_dataloader)} | train_loss: {out["train"]:.2f}, '
                     f'eval_loss: {out["eval"]:.2f}')
 
             # save the model if it was outperforming the previous best model
             cur_eval_loss = losses[-1]['eval']
-            if cur_eval_loss < best_eval_loss:
-                torch.save(model.state_dict(), f"best_model_eval{cur_eval_loss:.2nf}_epoch{epoch}.pth")
-                cur_eval_loss = best_eval_loss
-                print(f"New best model saved with eval_loss: {cur_eval_loss:.2f}")
-
+            if cur_eval_loss < best_eval_loss and i % args['save_interval'] == 0:
+                ckpt_id = loss.item()
+                save_ds_checkpoint(i, model, ckpt_id, args)
+                logging.info(f"New best model saved with eval_loss: {cur_eval_loss:.2f}")
+    df = pd.DataFrame(losses)
+    df.to_pickle(args['save_dir'] + '/losses.pkl')
     return losses

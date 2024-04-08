@@ -52,3 +52,5 @@ class InferenceArgs(ModelArgs):
 class DeepspeedArgs(ModelArgs):
     deepspeed: bool = True  # Whether to use deepspeed or not.
     fp16: bool = False
+    save_interval: int = 1000
+    save_dir: str = '/tmp/'
