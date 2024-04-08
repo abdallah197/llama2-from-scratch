@@ -59,10 +59,10 @@ def rate(step: int, model_size: int, warmup: int, factor: int = 1):
     )
 
 
-def save_ds_checkpoint(iteration, epoch, model, ckpt_id, args, optimizer=None, lr_scheduler=None):
+def save_ds_checkpoint(step, epoch, model, ckpt_id, args, optimizer=None, lr_scheduler=None):
     """Save a model checkpoint."""
     if args['deepspeed']:
-        client_state = {'iteration': iteration, 'epoch': epoch}
+        client_state = {'step': step, 'epoch': epoch}
         saved_path = model.save_checkpoint(args['save_dir'], ckpt_id, client_state=client_state)
         if saved_path is None:
             logging.info('Failed to save deepspeed checkpoint.')
@@ -72,7 +72,7 @@ def save_ds_checkpoint(iteration, epoch, model, ckpt_id, args, optimizer=None, l
         checkpoint = {
             'model_state_dict': model.state_dict(),
             'optimizer_state_dict': optimizer.state_dict(),
-            'iteration': iteration,
+            'step': step,
             'loss': ckpt_id,
             'epoch': epoch,
             'lr_scheduler_state_dict': lr_scheduler.state_dict()
@@ -93,10 +93,10 @@ def load_checkpoint(model, args, optimizer=None, lr_scheduler=None):
         checkpoint_name, client_state = model.load_checkpoint(args['load_dir'], args['ckpt_id'])
         if checkpoint_name is None:
             print("No checkpoint found at specified path!")
-            iteration = 0
+            step = 0
             epoch = 0
         else:
-            iteration = client_state.get('iteration', 0)
+            step = client_state.get('step', 0)
             epoch = client_state.get('epoch', 0)
     else:
         # Load checkpoint directly using torch.load for non-DeepSpeed case
@@ -105,20 +105,33 @@ def load_checkpoint(model, args, optimizer=None, lr_scheduler=None):
             checkpoint = torch.load(checkpoint_path, map_location='cuda:0')  # Assuming single GPU at cuda:0
         except FileNotFoundError:
             print(f"No checkpoint found at {checkpoint_path}!")
-            iteration = 0
+            step = 0
             epoch = 0
         else:
             # Load model, optimizer, and lr_scheduler states
             model.load_state_dict(checkpoint['model_state_dict'])
             optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
             lr_scheduler.load_state_dict(checkpoint['lr_scheduler_state_dict'])
-            iteration = checkpoint.get('iteration', 0)
+            step = checkpoint.get('step', 0)
             epoch = checkpoint.get('epoch', 0)
 
-    return epoch, iteration
+    return epoch, step
+
 
 def train(model: Transformer, train_config: TrainArgs, train_dataloader: DataLoader, eval_dataloader: DataLoader,
           args: Dict):
+    """
+    main training function to train llama2
+    Args:
+        model: LLama2 transformer.
+        train_config: training config class. contains main training params.
+        train_dataloader: training dataloader.
+        eval_dataloader: evaluation dataloader
+        args: Dict containing all combined args.
+
+    Returns:
+
+    """
     optimizer = AdamW(model.parameters(), lr=train_config.lr)
     scheduler = LambdaLR(optimizer=optimizer,
                          lr_lambda=lambda step: rate(
@@ -135,17 +148,19 @@ def train(model: Transformer, train_config: TrainArgs, train_dataloader: DataLoa
             dist_init_required=False
         )
 
+    # when loading the model, we start training from where we paused using the same epoch and step that
+    # training was paused on.
     if args['load_model']:
-        start_epoch, start_iteration = load_checkpoint(model, args, optimizer, scheduler)
+        start_epoch, start_step = load_checkpoint(model, args, optimizer, scheduler)
     else:
-        start_epoch, start_iteration = 0, 0
+        start_epoch, start_step = 0, 0
 
     losses = []
     best_eval_loss = float('inf')
 
     for epoch in tqdm(range(start_epoch, args['n_epochs'])):
         model.train()
-        for iteration, (X, Y) in enumerate(train_dataloader, start=start_iteration):
+        for step, (X, Y) in enumerate(train_dataloader, start=start_step):
             logits, loss = model(X, 0, Y)
             if args['deepspeed']:
                 model.backward(loss)
@@ -157,7 +172,7 @@ def train(model: Transformer, train_config: TrainArgs, train_dataloader: DataLoa
                 scheduler.step()
 
             # Log every log_interval batches
-            if (iteration + 1) % args['log_interval'] == 0:
+            if (step + 1) % args['log_interval'] == 0:
                 out = estimate_loss(model=model,
                                     eval_iters=args['eval_iters'],
                                     train_dataloader=train_dataloader,
@@ -165,14 +180,14 @@ def train(model: Transformer, train_config: TrainArgs, train_dataloader: DataLoa
                                     device=args['device'])
                 losses.extend([out])
                 logging.info(
-                    f'Epoch: {epoch}, Batch: {iteration + 1}/{len(train_dataloader)} | train_loss: {out["train"]:.2f}, '
+                    f'Epoch: {epoch}, Batch: {step + 1}/{len(train_dataloader)} | train_loss: {out["train"]:.2f}, '
                     f'eval_loss: {out["eval"]:.2f}')
 
             # save the model if it was outperforming the previous best model
             cur_eval_loss = losses[-1]['eval']
-            if cur_eval_loss < best_eval_loss and iteration % args['save_interval'] == 0:
+            if cur_eval_loss < best_eval_loss and step % args['save_interval'] == 0:
                 ckpt_id = loss.item()
-                save_ds_checkpoint(iteration, epoch, model, ckpt_id, args, optimizer, scheduler)
+                save_ds_checkpoint(step, epoch, model, ckpt_id, args, optimizer, scheduler)
                 logging.info(f"New best model saved with eval_loss: {cur_eval_loss:.2f}")
     df = pd.DataFrame(losses)
     df.to_pickle(args['save_dir'] + '/losses.pkl')
