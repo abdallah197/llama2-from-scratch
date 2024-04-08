@@ -1,6 +1,5 @@
 *.chk
 *.pth
-*json
 *.sh
 *.model
 *.txt
