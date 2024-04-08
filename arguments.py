@@ -1,4 +1,4 @@
-from config import DataArgs, ModelArgs, TrainArgs, InferenceArgs
+from config import DataArgs, ModelArgs, TrainArgs, InferenceArgs, DeepspeedArgs
 
 
 def get_args():
@@ -8,7 +8,7 @@ def get_args():
     model_args = ModelArgs()
     train_args = TrainArgs()
     inference_args = InferenceArgs()
-    deepspeed_args = DataArgs()
+    deepspeed_args = DeepspeedArgs()
 
     args = {}
 
