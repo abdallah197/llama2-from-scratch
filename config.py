@@ -54,6 +54,5 @@ class InferenceArgs(ModelArgs):
 @dataclass
 class DeepspeedArgs(ModelArgs):
     deepspeed: bool = True  # Whether to use deepspeed or not.
-    fp16: bool = False
     save_interval: int = 1000
     ckpt_id: float = 0.0
