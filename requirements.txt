@@ -3,3 +3,4 @@ sentencepiece
 tqdm
 deepspeed
 nvitop
+mpi4py
