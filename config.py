@@ -29,6 +29,9 @@ class TrainArgs(ModelArgs):
     eval_iters: int = 200
     lr: float = 3e-4
     warmup_steps: int = 4000
+    load_model: bool = False
+    save_dir: str = '/tmp/'
+    load_dir: str = '/tmp/'
 
 
 @dataclass
@@ -53,4 +56,4 @@ class DeepspeedArgs(ModelArgs):
     deepspeed: bool = True  # Whether to use deepspeed or not.
     fp16: bool = False
     save_interval: int = 1000
-    save_dir: str = '/tmp/'
+    ckpt_id: float = 0.0
