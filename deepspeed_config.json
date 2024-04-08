@@ -1,0 +1,54 @@
+{
+  "train_micro_batch_size_per_gpu": 32,
+  "gradient_accumulation_steps": 4,
+  "gradient_clipping": 1.0,
+  "optimizer": {
+    "type": "OneBitAdam",
+    "params": {
+      "lr": 3e-4,
+      "betas": [
+        0.8,
+        0.999
+      ],
+      "eps": 1e-8,
+      "weight_decay": 3e-7,
+      "freeze_step": 400,
+      "cuda_aware": false,
+      "comm_backend_name": "nccl"
+    }
+  },
+  "scheduler": {
+    "type": "WarmupLR",
+    "params": {
+      "warmup_min_lr": 0,
+      "warmup_max_lr": 3e-4,
+      "warmup_num_steps": 4000
+    }
+  },
+  "zero_optimization": {
+    "stage": 3,
+    "overlap_comm": true,
+    "allgather_partitions": true,
+    "reduce_scatter": true,
+    "allgather_bucket_size": 5e8,
+    "reduce_bucket_size": 5e8,
+    "contiguous_gradients": true,
+    "offload_optimizer": {
+      "device": "cpu",
+      "pin_memory": true
+    },
+    "offload_param": {
+      "device": "cpu",
+      "pin_memory": true
+    },
+    "sub_group_size": 1e12
+  },
+  "activation_checkpointing": {
+    "partition_activations": false,
+    "contiguous_memory_optimization": false,
+    "cpu_checkpointing": false,
+    "number_checkpoints": null,
+    "synchronize_checkpoint_boundary": false,
+    "profile": false
+  }
+}
