@@ -131,9 +131,7 @@ def train(model: Transformer, train_config: TrainArgs, train_dataloader: DataLoa
         logging.info('Deepspeed is enabled.')
         model, optimizer, _, lr_scheduler = deepspeed.initialize(
             model=model,
-            optimizer=optimizer,
             args=args,
-            lr_scheduler=scheduler,
             dist_init_required=False
         )
 

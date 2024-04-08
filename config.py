@@ -56,3 +56,4 @@ class DeepspeedArgs(ModelArgs):
     deepspeed: bool = True  # Whether to use deepspeed or not.
     save_interval: int = 1000
     ckpt_id: float = 0.0
+    deepspeed_config: str = 'deepspeed_config.json'
