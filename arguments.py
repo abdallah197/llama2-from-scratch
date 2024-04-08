@@ -15,6 +15,3 @@ def get_args():
     for config_args in [model_args, train_args, data_args, inference_args, deepspeed_args]:
         args.update(vars(config_args))
     return args
-
-
-get_args()
