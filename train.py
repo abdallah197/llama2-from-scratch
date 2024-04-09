@@ -145,7 +145,8 @@ def train(model: Transformer, train_config: TrainArgs, train_dataloader: DataLoa
         model, optimizer, _, lr_scheduler = deepspeed.initialize(
             model=model,
             args=args,
-            dist_init_required=False
+            dist_init_required=False,
+            config_params=args['deepspeed_config']
         )
     else:
         model = model.to(args['device'])
