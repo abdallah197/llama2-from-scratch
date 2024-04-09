@@ -63,7 +63,7 @@ def apply_rotary_embeddings(x: torch.Tensor, m_theta_complex: torch.Tensor, devi
     x_complex = torch.view_as_complex(x.float().reshape(*x.shape[:-1], -1, 2))
 
     # Reshape the m_theta complex tensor to match the shape of the x_complex tensor.
-    # So we need to add the batch dimension and the head dimension
+    # So we need to add the batch dimension and the num of heads dimension
     # (Seq_Len, Head_Dim/2) -> (1, Seq_Len, 1, Head_Dim/2)
     m_theta_complex = m_theta_complex.unsqueeze(0).unsqueeze(2)
 

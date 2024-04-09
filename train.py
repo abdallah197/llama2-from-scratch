@@ -147,6 +147,8 @@ def train(model: Transformer, train_config: TrainArgs, train_dataloader: DataLoa
             args=args,
             dist_init_required=False
         )
+    else:
+        model = model.to(args['device'])
 
     # when loading the model, we start training from where we paused using the same epoch and step that
     # training was paused on.
