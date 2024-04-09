@@ -7,7 +7,7 @@ import torch.nn.functional as F
 from config import ModelArgs
 
 
-def precompute_theta_pos_frequencies(head_dim: int, seq_length: int, device: str, theta: float = 10000):
+def precompute_theta_pos_frequencies(head_dim: int, seq_length: int, theta: float = 10000):
     """
     compute complex MTheta matrix
     Args:
@@ -27,11 +27,11 @@ def precompute_theta_pos_frequencies(head_dim: int, seq_length: int, device: str
     # Shape: (Head_Dim / 2)
     theta_numerator = torch.arange(0, head_dim, 2).float()
     # Shape: (Head_Dim / 2)
-    theta = 1.0 / (theta ** (theta_numerator / head_dim)).to(device)
+    theta = 1.0 / (theta ** (theta_numerator / head_dim))
 
     # Construct the positions (the "m" parameter)
     # Shape: (Seq_Len)
-    m = torch.arange(seq_length, device=device)
+    m = torch.arange(seq_length)
 
     # Multiply each theta by each position using the outer product.
     # Shape: (Seq_Len) outer_product* (Head_Dim / 2) -> (Seq_Len, Head_Dim / 2)
@@ -43,7 +43,7 @@ def precompute_theta_pos_frequencies(head_dim: int, seq_length: int, device: str
     return m_theta_complex
 
 
-def apply_rotary_embeddings(x: torch.Tensor, m_theta_complex: torch.Tensor, device: str):
+def apply_rotary_embeddings(x: torch.Tensor, m_theta_complex: torch.Tensor):
     """
     Applies four transformation to input embedding and applies rotary embeddings to it.
     Args:
@@ -77,7 +77,7 @@ def apply_rotary_embeddings(x: torch.Tensor, m_theta_complex: torch.Tensor, devi
     # step4 convert to real values, and flatten
     x_out = torch.view_as_real(x_rotated)
     x_out = x_out.reshape(*x.shape)
-    return x_out.type_as(x).to(device)
+    return x_out.type_as(x)
 
 
 def repeat_kv(x: torch.Tensor, n_rep: int) -> torch.Tensor:
@@ -171,11 +171,11 @@ class SelfAttention(nn.Module):
         """Forward pass for the SelfAttention module, computes attention scores and applies them to the input."""
         batch_size, seq_length, _ = x.shape  # Input shape: (Batch Size, Sequence Length, Head Dimension)
         # (B, 1, Dim) ->  # (B, 1, HQ * Head dim)
-        xq = self.wq(x).to(self.device)
+        xq = self.wq(x)
         # (B, 1, Dim) ->  # (B, 1, H_KV * Head dim)
-        xk = self.wk(x).to(self.device)
+        xk = self.wk(x)
         # (B, 1, Dim) ->  # (B, 1, H_KV * Head dim)
-        xv = self.wv(x).to(self.device)
+        xv = self.wv(x)
 
         # (batch_size, 1, H_Q * Head Dim) --> (batch_size, 1, H_Q,  Head Dim)
         xq = xq.view(batch_size, seq_length, self.n_heads_q, self.head_dim)
@@ -185,8 +185,8 @@ class SelfAttention(nn.Module):
         xv = xv.view(batch_size, seq_length, self.n_kv_heads, self.head_dim)
 
         # Apply rotary position embeddings to queries and keys (shapes remain unchanged)
-        xq = apply_rotary_embeddings(xq, m_theta_complex, device=x.device)
-        xk = apply_rotary_embeddings(xk, m_theta_complex, device=x.device)
+        xq = apply_rotary_embeddings(xq, m_theta_complex)
+        xk = apply_rotary_embeddings(xk, m_theta_complex)
 
         # During inference, we apply KV cache.
         if self.mode == 'inference':
@@ -200,7 +200,7 @@ class SelfAttention(nn.Module):
             keys = self.cache_k[:batch_size, 0:start_pos + seq_length]
             values = self.cache_v[:batch_size, 0:start_pos + seq_length]
         else:
-            keys, values = xk.to(self.device), xv.to(self.device)
+            keys, values = xk, xv
 
         # Repeat the heads of K, V to reach the number of heads of Q.
         # This is a shortcut and not the optimized solution to implement Grouped Query attention
@@ -367,7 +367,7 @@ class Transformer(nn.Module):
         # we multiply seq_len *2 because the prompt might be long
         self.freqs_complex = precompute_theta_pos_frequencies(self.args.dim // self.args.n_heads,
                                                               self.args.max_seq_length * 2,
-                                                              device=self.args.device)
+                                                              ).to(self.tok_embeddings.weight.device)
 
     def forward(self, tokens: torch.Tensor, start_pos: int, targets=None):
         # (B, seq_length)
