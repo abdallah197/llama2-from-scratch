@@ -3,7 +3,6 @@ from typing import List, Tuple
 import sentencepiece as spm
 import torch
 from torch.utils.data import Dataset, random_split, DataLoader
-from torch.utils.data.distributed import DistributedSampler
 
 
 def llama_collate_fn(batch: List[torch.Tensor]) -> Tuple[torch.Tensor, torch.Tensor]:
@@ -124,20 +123,16 @@ def create_dataloaders(
         Tuple[DataLoader, DataLoader]: A tuple containing the data loaders for the training and evaluation datasets.
     """
     train_dataset, eval_dataset = split_dataset(dataset, train_split_ratio)
-    train_sampler = DistributedSampler(train_dataset)
-    eval_sampler = DistributedSampler(eval_dataset)
     train_dataloader = DataLoader(train_dataset,
                                   batch_size=batch_size,
                                   num_workers=128,
                                   pin_memory=True,
                                   persistent_workers=True,
-                                  sampler=train_sampler,
                                   collate_fn=llama_collate_fn)
     eval_dataloader = DataLoader(eval_dataset, batch_size=batch_size,
                                  num_workers=128,
                                  pin_memory=True,
                                  persistent_workers=True,
-                                 sampler=eval_sampler,
                                  collate_fn=llama_collate_fn)
 
     return train_dataloader, eval_dataloader
