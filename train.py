@@ -33,9 +33,10 @@ def estimate_loss(model: Transformer, eval_iters: int, train_dataloader: DataLoa
     average_losses = {}
 
     for dataloader in [train_dataloader, eval_dataloader]:
+        iterator = iter(dataloader)
         losses = torch.zeros(eval_iters)
         for i in range(eval_iters):
-            inputs, targets = next(iter(dataloader))
+            inputs, targets = next(iterator)
             inputs, targets = inputs.to(device), targets.to(device)
 
             logits, loss = model(inputs, 0, targets)
@@ -187,11 +188,11 @@ def train(model: Transformer, train_config: TrainArgs, train_dataloader: DataLoa
                     f'eval_loss: {out["eval"]:.2f}')
 
             # save the model if it was outperforming the previous best model
-            cur_eval_loss = losses[-1]['eval']
-            if cur_eval_loss < best_eval_loss and step % args['save_interval'] == 0:
-                ckpt_id = loss.item()
-                save_ds_checkpoint(step, epoch, model, ckpt_id, args, optimizer, scheduler)
-                logging.info(f"New best model saved with eval_loss: {cur_eval_loss:.2f}")
+                cur_eval_loss = losses[-1]['eval']
+                if cur_eval_loss < best_eval_loss and step % args['save_interval'] == 0:
+                    ckpt_id = loss.item()
+                    save_ds_checkpoint(step, epoch, model, ckpt_id, args, optimizer, scheduler)
+                    logging.info(f"New best model saved with eval_loss: {cur_eval_loss:.2f}")
     df = pd.DataFrame(losses)
     df.to_pickle(args['save_dir'] + '/losses.pkl')
     return losses
