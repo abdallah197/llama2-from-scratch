@@ -41,12 +41,6 @@ cd llama2-from-scratch
 pip install -r requirements.txt
 ```
 
-## Training Results 📊
-
-After the training and evaluation phases, we can see a consistent drop in both training and evaluation losses,
-indicating the model's learning effectiveness. Below is a plot demonstrating this trend over the training steps.
-
-![losses.png](losses.png)
 
 ## Usage 🚀
 
@@ -86,15 +80,20 @@ We have three main config dataclasses:
 
 - ModelArgs.
 - DataArgs and
-- TrainArgs.
+- TrainArgs
+- InferenceArgs
+- DeepSpeedArgs
 
 To adjust these configurations, modify the respective fields in the data class instances before initializing your model
 or training process. For instance, to increase the number of layers and attention heads, you might do:
 
 ```
-model_args = ModelArgs(n_layers=48, n_heads=48)
-train_args = TrainArgs(lr=5e-4, n_epochs=20)
-data_args = DataArgs(filepath='new_dataset.txt')
+- **ModelArgs**: Contains configurations related to the model architecture, such as the number of layers and attention heads.
+- **DataArgs**: Includes settings for data processing and input data, such as the file path to the dataset.
+- **TrainArgs**: Encompasses parameters for training, such as learning rate and number of epochs.
+- **InferenceArgs**: Holds configurations specific to the inference process.
+- **DeepSpeedArgs**: Manages configurations for distributed computing using DeepSpeed.
+
 ```
 
 I adjusted the model original HP to fit my compute. Here's a summary of the main configuration settings:
@@ -105,6 +104,19 @@ I adjusted the model original HP to fit my compute. Here's a summary of the main
 - Optional Number of Heads for Key and Value (n_kv_heads): Can be set for specific requirements
 - Vocabulary Size: Set dynamically upon loading the llama2 Sentence Piece tokenizer.
 - Operating Mode: 'train/inference', when choosing inference, we apply KV-Cache.
+
+## Distributed Computing with DeepSpeed
+
+This repository supports distributed computing using DeepSpeed. To enable it, follow these steps:
+
+1. Set DeepSpeedArgs.deepspeed to True: In your configuration file (config.py), set DeepSpeedArgs.deepspeed to True to
+   indicate that you want to utilize DeepSpeed for distributed computing.
+2. Populate the DeepSpeed Config File: Create or modify the deepspeed_config.json file to configure DeepSpeed according
+   to your requirements. This file should contain settings such as the number of GPUs, optimizer parameters, and any
+   other DeepSpeed-specific configurations.
+
+By configuring DeepSpeedArgs and populating deepspeed_config.json, you can enable distributed computing using DeepSpeed
+in your training process.
 
 ## Acknowledgments 💖
 
@@ -117,6 +129,8 @@ community. We'd like to extend our gratitude to the following:
   This resource provided practical insights and a foundational understanding necessary for this implementation.
 - The [Meta LLaMA GitHub repository](https://github.com/meta-llama/llama) has been an essential resource for
   understanding the intricacies of the LLaMA 2 model and its implementation.
+- DeepSpeed [Megatron-LM GPT2 tutorial](https://www.deepspeed.ai/tutorials/megatron/) which details how to integrate
+  deepspeed when training a torch based model.
 
 I am grateful for the knowledge shared by these individuals and communities, which has significantly contributed to the
 development of this project.
