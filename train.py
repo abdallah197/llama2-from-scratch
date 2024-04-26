@@ -145,6 +145,8 @@ def train(model: Transformer, train_config: TrainArgs, train_dataloader: DataLoa
         logging.info('Deepspeed is enabled.')
         model, optimizer, _, lr_scheduler = deepspeed.initialize(
             model=model,
+            optimizer=optimizer,
+            lr_scheduler=scheduler,
             args=args,
             dist_init_required=False,
             config_params=args['deepspeed_config']
@@ -165,6 +167,7 @@ def train(model: Transformer, train_config: TrainArgs, train_dataloader: DataLoa
     for epoch in tqdm(range(start_epoch, args['n_epochs'])):
         model.train()
         for step, (X, Y) in enumerate(train_dataloader, start=start_step):
+            X, Y = X.to(model.device), Y.to(model.device)
             logits, loss = model(X, 0, Y)
             if args['deepspeed']:
                 model.backward(loss)
@@ -187,7 +190,7 @@ def train(model: Transformer, train_config: TrainArgs, train_dataloader: DataLoa
                     f'Epoch: {epoch}, Batch: {step + 1}/{len(train_dataloader)} | train_loss: {out["train"]:.2f}, '
                     f'eval_loss: {out["eval"]:.2f}')
 
-            # save the model if it was outperforming the previous best model
+                # save the model if it was outperforming the previous best model
                 cur_eval_loss = losses[-1]['eval']
                 if cur_eval_loss < best_eval_loss and step % args['save_interval'] == 0:
                     ckpt_id = loss.item()
